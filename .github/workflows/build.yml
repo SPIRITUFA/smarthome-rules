@@ -1,5 +1,8 @@
 name: Build MRS
 
+permissions:
+  contents: write
+
 on:
   push:
     paths:
