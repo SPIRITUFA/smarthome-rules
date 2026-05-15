@@ -1,4 +1,4 @@
-name: Build MRS
+name: SmartHome Auto MRS Build
 
 permissions:
   contents: write
@@ -16,20 +16,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Build ruleset
+      - name: Build MRS
         run: |
           mkdir -p build
-
-          # базовый файл
           cp smarthome.list build/base.list
 
-          # можно добавить авто-источники (если хочешь расширим позже)
-          # curl -s URL >> build/base.list
-
-          # генерация MRS (простой стабильный формат)
           python3 - << 'EOF'
 import struct
 
@@ -46,18 +40,27 @@ with open(inp, "r", encoding="utf-8") as f:
 
 data = "\n".join(lines).encode()
 
+# mihomo-compatible container header
 header = b"mrls" + struct.pack("<I", len(data))
 
 with open(out, "wb") as f:
     f.write(header + data)
 
-print("OK BUILT")
+print("MRS BUILT OK")
 EOF
 
-      - name: Commit & Push
+      - name: Commit & Safe Push
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
+
           git add smarthome.mrs
           git commit -m "auto update mrs" || exit 0
+
+          # 🔥 fix for "fetch first" error
+          git fetch origin main
+          git reset --hard origin/main
+
+          git add smarthome.mrs
+          git commit -m "auto update mrs"
           git push
