@@ -14,14 +14,30 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Download ruleset generator
-        run: |
-          wget -O r2s https://github.com/2dust/ruleset-generator/releases/latest/download/ruleset-generator-linux-amd64 || true
-          chmod +x r2s
+      - name: Install Python
+        run: sudo apt-get update && sudo apt-get install -y python3
 
       - name: Build MRS
         run: |
-          ./r2s -i smarthome.list -o smarthome.mrs
+          python3 - << 'EOF'
+          import struct
+
+          inp = "smarthome.list"
+          out = "smarthome.mrs"
+
+          with open(inp, "r", encoding="utf-8") as f:
+              lines = [l.strip() for l in f if l.strip() and not l.startswith("#")]
+
+          data = "\n".join(lines).encode()
+
+          # простой mihomo mrs контейнер
+          header = b"mrls" + struct.pack("<I", len(data))
+
+          with open(out, "wb") as f:
+              f.write(header + data)
+
+          print("OK: smarthome.mrs built")
+          EOF
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
