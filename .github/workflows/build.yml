@@ -19,49 +19,49 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Install deps
+      # ─────────────────────────────
+      # DEBUG: убедимся что файл есть
+      # ─────────────────────────────
+      - name: Debug file input
         run: |
-          sudo apt-get update
-          sudo apt-get install -y python3 python3-pip
-          pip3 install zstandard
+          echo "===== CHECK FILE ====="
+          ls -la
+          echo "===== CONTENT ====="
+          cat smarthome.list || (echo "FILE NOT FOUND" && exit 1)
+          echo "====================="
 
-      - name: Debug input file
-        run: |
-          echo "===== smarthome.list ====="
-          cat smarthome.list || true
-          echo "=========================="
-
+      # ─────────────────────────────
+      # BUILD MRS (NO LOSS VERSION)
+      # ─────────────────────────────
       - name: Build MRS
         run: |
           python3 - << 'EOF'
           import zstandard as zstd
 
-          with open("smarthome.list", "r", encoding="utf-8") as f:
-              rules = []
-              for line in f:
-                  line = line.strip().replace("\r", "")
-                  if not line:
-                      continue
-                  if line.lstrip().startswith("#"):
-                      continue
-                  rules.append(line)
+          path = "smarthome.list"
 
-          print("RULES LOADED:", len(rules))
+          with open(path, "rb") as f:
+              data = f.read()
 
-          if len(rules) == 0:
-              raise Exception("smarthome.list is empty after filtering")
+          print("RAW BYTES:", len(data))
 
-          data = "\n".join(rules).encode("utf-8")
+          if len(data) == 0:
+              raise Exception("smarthome.list is EMPTY")
 
+          # zstd compress
           cctx = zstd.ZstdCompressor(level=10)
           compressed = cctx.compress(data)
 
           with open("smarthome.mrs", "wb") as f:
               f.write(compressed)
 
-          print("MRS built OK")
+          print("MRS CREATED OK")
+          print("OUTPUT SIZE:", len(compressed))
           EOF
 
+      # ─────────────────────────────
+      # CHECK CHANGES
+      # ─────────────────────────────
       - name: Check changes
         id: changes
         run: |
@@ -71,6 +71,9 @@ jobs:
             echo "changed=true" >> $GITHUB_OUTPUT
           fi
 
+      # ─────────────────────────────
+      # COMMIT ONLY IF CHANGED
+      # ─────────────────────────────
       - name: Commit & push
         if: steps.changes.outputs.changed == 'true'
         run: |
