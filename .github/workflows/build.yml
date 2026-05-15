@@ -1,0 +1,38 @@
+name: Build MRS
+
+on:
+  push:
+    paths:
+      - "smarthome.list"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Download ruleset generator
+        run: |
+          wget -O r2s https://github.com/2dust/ruleset-generator/releases/latest/download/ruleset-generator-linux-amd64 || true
+          chmod +x r2s
+
+      - name: Build MRS
+        run: |
+          ./r2s -i smarthome.list -o smarthome.mrs
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: smarthome-mrs
+          path: smarthome.mrs
+
+      - name: Commit result
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add smarthome.mrs
+          git commit -m "update mrs" || exit 0
+          git push
