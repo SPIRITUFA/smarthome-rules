@@ -16,19 +16,25 @@ jobs:
 
       - name: Install mihomo
         run: |
-          wget https://github.com/MetaCubeX/mihomo/releases/latest/download/mihomo-linux-amd64.tar.gz
-          tar -xzf mihomo-linux-amd64.tar.gz
+          wget -O mihomo.tar.gz https://github.com/MetaCubeX/mihomo/releases/latest/download/mihomo-linux-amd64.tar.gz
+          tar -xzf mihomo.tar.gz
+          chmod +x mihomo
           sudo mv mihomo /usr/local/bin/
 
-      - name: Build MRS
+      - name: Debug input file
+        run: |
+          echo "=== FILE CONTENT ==="
+          cat smarthome.txt
+
+      - name: Build MRS (correct method)
         run: |
           mkdir -p output
           mihomo convert-ruleset \
-            --type classical \
+            --type domain \
             --input smarthome.txt \
             --output output/smarthome.mrs
 
-      - name: Upload
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: smarthome-mrs
