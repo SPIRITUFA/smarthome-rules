@@ -14,27 +14,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install mihomo
+      - name: Install rule converter
         run: |
-          wget -O mihomo.tar.gz https://github.com/MetaCubeX/mihomo/releases/latest/download/mihomo-linux-amd64.tar.gz
-          tar -xzf mihomo.tar.gz
-          chmod +x mihomo
-          sudo mv mihomo /usr/local/bin/
+          wget -O r2s https://github.com/2dust/ruleset-generator/releases/latest/download/ruleset-generator-linux-amd64
+          chmod +x r2s
 
-      - name: Debug input file
-        run: |
-          echo "=== FILE CONTENT ==="
-          cat smarthome.txt
-
-      - name: Build MRS (correct method)
+      - name: Build MRS
         run: |
           mkdir -p output
-          mihomo convert-ruleset \
-            --type domain \
-            --input smarthome.txt \
-            --output output/smarthome.mrs
 
-      - name: Upload artifact
+          ./r2s \
+            -i smarthome.txt \
+            -o output/smarthome.mrs
+
+      - name: Upload
         uses: actions/upload-artifact@v4
         with:
           name: smarthome-mrs
