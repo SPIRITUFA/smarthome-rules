@@ -1,4 +1,4 @@
-name: Build MRS
+name: DEBUG LIST
 
 on:
   push:
@@ -6,80 +6,31 @@ on:
       - "smarthome.list"
   workflow_dispatch:
 
-permissions:
-  contents: write
-
 jobs:
-  build:
+  debug:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # ─────────────────────────────
-      # DEBUG: убедимся что файл есть
-      # ─────────────────────────────
-      - name: Debug file input
+      - name: FULL DEBUG
         run: |
-          echo "===== CHECK FILE ====="
+          echo "PWD:"
+          pwd
+
+          echo "FILES IN REPO:"
           ls -la
-          echo "===== CONTENT ====="
-          cat smarthome.list || (echo "FILE NOT FOUND" && exit 1)
-          echo "====================="
 
-      # ─────────────────────────────
-      # BUILD MRS (NO LOSS VERSION)
-      # ─────────────────────────────
-      - name: Build MRS
-        run: |
-          python3 - << 'EOF'
-          import zstandard as zstd
+          echo "LOOKING FOR LIST:"
+          find . -name "*.list" -type f
 
-          path = "smarthome.list"
+          echo "SHOW smarthome.list:"
+          cat smarthome.list || echo "❌ FILE NOT FOUND"
 
-          with open(path, "rb") as f:
-              data = f.read()
+          echo "FILE SIZE:"
+          wc -c smarthome.list || true
 
-          print("RAW BYTES:", len(data))
-
-          if len(data) == 0:
-              raise Exception("smarthome.list is EMPTY")
-
-          # zstd compress
-          cctx = zstd.ZstdCompressor(level=10)
-          compressed = cctx.compress(data)
-
-          with open("smarthome.mrs", "wb") as f:
-              f.write(compressed)
-
-          print("MRS CREATED OK")
-          print("OUTPUT SIZE:", len(compressed))
-          EOF
-
-      # ─────────────────────────────
-      # CHECK CHANGES
-      # ─────────────────────────────
-      - name: Check changes
-        id: changes
-        run: |
-          if git diff --quiet smarthome.mrs; then
-            echo "changed=false" >> $GITHUB_OUTPUT
-          else
-            echo "changed=true" >> $GITHUB_OUTPUT
-          fi
-
-      # ─────────────────────────────
-      # COMMIT ONLY IF CHANGED
-      # ─────────────────────────────
-      - name: Commit & push
-        if: steps.changes.outputs.changed == 'true'
-        run: |
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-
-          git add smarthome.mrs
-          git commit -m "update mrs"
-          git push
+          echo "LINE COUNT:"
+          wc -l smarthome.list || true
