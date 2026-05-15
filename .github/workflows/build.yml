@@ -1,0 +1,35 @@
+name: Build SmartHome MRS
+
+on:
+  push:
+    paths:
+      - "smarthome.txt"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install mihomo
+        run: |
+          wget https://github.com/MetaCubeX/mihomo/releases/latest/download/mihomo-linux-amd64.tar.gz
+          tar -xzf mihomo-linux-amd64.tar.gz
+          sudo mv mihomo /usr/local/bin/
+
+      - name: Build MRS
+        run: |
+          mkdir -p output
+          mihomo convert-ruleset \
+            --type classical \
+            --input smarthome.txt \
+            --output output/smarthome.mrs
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: smarthome-mrs
+          path: output/smarthome.mrs
