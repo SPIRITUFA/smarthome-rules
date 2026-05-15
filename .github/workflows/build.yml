@@ -7,6 +7,8 @@ on:
   push:
     paths:
       - "smarthome.list"
+  schedule:
+    - cron: "0 3 * * *"   # каждый день 03:00 UTC
   workflow_dispatch:
 
 jobs:
@@ -14,44 +16,48 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Python
-        run: sudo apt-get update && sudo apt-get install -y python3
-
-      - name: Build MRS
+      - name: Build ruleset
         run: |
+          mkdir -p build
+
+          # базовый файл
+          cp smarthome.list build/base.list
+
+          # можно добавить авто-источники (если хочешь расширим позже)
+          # curl -s URL >> build/base.list
+
+          # генерация MRS (простой стабильный формат)
           python3 - << 'EOF'
-          import struct
+import struct
 
-          inp = "smarthome.list"
-          out = "smarthome.mrs"
+inp = "build/base.list"
+out = "smarthome.mrs"
 
-          with open(inp, "r", encoding="utf-8") as f:
-              lines = [l.strip() for l in f if l.strip() and not l.startswith("#")]
+with open(inp, "r", encoding="utf-8") as f:
+    lines = []
+    for l in f:
+        l = l.strip()
+        if not l or l.startswith("#"):
+            continue
+        lines.append(l)
 
-          data = "\n".join(lines).encode()
+data = "\n".join(lines).encode()
 
-          # простой mihomo mrs контейнер
-          header = b"mrls" + struct.pack("<I", len(data))
+header = b"mrls" + struct.pack("<I", len(data))
 
-          with open(out, "wb") as f:
-              f.write(header + data)
+with open(out, "wb") as f:
+    f.write(header + data)
 
-          print("OK: smarthome.mrs built")
-          EOF
+print("OK BUILT")
+EOF
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: smarthome-mrs
-          path: smarthome.mrs
-
-      - name: Commit result
+      - name: Commit & Push
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
           git add smarthome.mrs
-          git commit -m "update mrs" || exit 0
+          git commit -m "auto update mrs" || exit 0
           git push
